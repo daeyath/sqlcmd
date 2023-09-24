@@ -25,36 +25,89 @@ static int result(void *NotUsed, int argc, char **argv, char **azColName){
 	return 0;
 }
 
-void cmd(){
-	const int length=1024;
-	char sqlstr[length];
+bool connect(char *filename){
+	bool res=false;
+	printf("Database %s\n", filename);
+	rc=sqlite3_open(filename, &db);
+	if(rc){
+		fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
+	}else{
+		fprintf(stderr, "Ok\n");
+		res=true;
+	}
+	return res;
+}
+
+void substr(char *src, int from, int to, char *dest){
+	for(int i=from, j=0; i<=to-2; i++, j++){
+		dest[j]=src[i];
+	}
+}
+
+void command(char *str){
+	const int begin=3;
+	const int end=strlen(str);
+	
+	char *param=new char[end-begin];
+	substr(str,begin,end,param);
+	
+	if(strncmp(":c",str,2)==0){
+		connect(param);
+	}
+	
+	free(param);
+}
+
+bool delim(char c, char *str){
+	bool result=false;
+	for(int i=0; i<=strlen(str); i++){
+		result=c==str[i];
+		if(result) break;
+	}
+	return result;
+}
+
+void prompt(){
+	const int len=1024;
+	char sqlstr[len]="";
+	char str[len];
+	bool endscript=true;
 	while(true){
-		printf("sql> ");
-		fgets(sqlstr,length,stdin);
-		if(strncmp("exit",sqlstr,4)==0){
+		printf(endscript?"sql> ":"   > ");
+		fgets(str,len,stdin);
+		if(strncmp("exit",str,4)==0){
 			break;
+		}else if(strncmp(":",str,1)==0){
+			command(str);
 		}else{
-			colexists=false;
-			rc=sqlite3_exec(db,sqlstr,result,0,&zErrMsg);
-			if(rc!=SQLITE_OK){
-				fprintf(stderr,"SQL Error: %s",zErrMsg);
-				sqlite3_free(zErrMsg);
+			strcat(sqlstr, str);
+			endscript=delim(';',str);
+			if(endscript){
+				colexists=false;
+				rc=sqlite3_exec(db,sqlstr,result,0,&zErrMsg);
+				if(rc!=SQLITE_OK){
+					fprintf(stderr,"SQL Error: %s",zErrMsg);
+					sqlite3_free(zErrMsg);
+				}
+				printf("\n");
+				sqlstr[0]='\0';
 			}
-			printf("\n");
 		}
 	}
 }
 
+void close(){
+	sqlite3_close(db);
+}
+
 int main(int argc, char *argv[])
 {
-	char dbname[]="test.db";
-	rc=sqlite3_open(dbname, &db);
-	if(rc){
-		fprintf(stderr, "Tidak dapat membuka database %s\n", sqlite3_errmsg(db));
-		return(0);
+	char *fname;
+	if(argv[1]){
+		fname=argv[1];
 	}else{
-		fprintf(stderr, "Database terkoneksi\n");
-		cmd();
+		fname=":memory:";
 	}
-	sqlite3_close(db);
+	if(connect(fname)) prompt();
+	close();
 }
