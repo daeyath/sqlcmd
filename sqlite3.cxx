@@ -68,8 +68,8 @@ bool delim(char c, char *str){
 }
 
 void prompt(){
-	const int len=1024;
-	char sqlstr[len]="";
+	char sqlstr[1024]="";
+	const int len=64;
 	char str[len];
 	bool endscript=true;
 	while(true){
