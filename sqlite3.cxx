@@ -72,10 +72,12 @@ void prompt(){
 	const int len=64;
 	char str[len];
 	bool endscript=true;
-	while(strncmp("exit",str,4)!=0){
+	while(true){
 		printf(endscript?"sql> ":"   > ");
 		fgets(str,len,stdin);
-		if(strncmp(":",str,1)==0){
+		if(strncmp("exit",str,4)==0){
+			break;
+		}else if(strncmp(":",str,1)==0){
 			str[strlen(str)-1]='\0';
 			command(str);
 		}else{
