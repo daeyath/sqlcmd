@@ -39,7 +39,7 @@ bool connect(char *filename){
 }
 
 void substr(char *src, int from, int to, char *dest){
-	for(int i=from, j=0; i<=to-2; i++, j++){
+	for(int i=from, j=0; i<=to; i++, j++){
 		dest[j]=src[i];
 	}
 }
@@ -59,12 +59,12 @@ void command(char *str){
 }
 
 bool delim(char c, char *str){
-	bool result=false;
+	bool found=false;
 	for(int i=0; i<=strlen(str); i++){
-		result=c==str[i];
-		if(result) break;
+		found=c==str[i];
+		if(found) break;
 	}
-	return result;
+	return found;
 }
 
 void prompt(){
@@ -72,12 +72,11 @@ void prompt(){
 	const int len=64;
 	char str[len];
 	bool endscript=true;
-	while(true){
+	while(strncmp("exit",str,4)!=0){
 		printf(endscript?"sql> ":"   > ");
 		fgets(str,len,stdin);
-		if(strncmp("exit",str,4)==0){
-			break;
-		}else if(strncmp(":",str,1)==0){
+		if(strncmp(":",str,1)==0){
+			str[strlen(str)-1]='\0';
 			command(str);
 		}else{
 			strcat(sqlstr, str);
