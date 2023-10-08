@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <cstring>
-#include <stdlib.h>
+#include <string>
 #include <sqlite3.h>
 
 using namespace std;
@@ -25,37 +23,58 @@ static int result(void *NotUsed, int argc, char **argv, char **azColName){
 	return 0;
 }
 
-bool connect(char *filename){
+bool connect(const char *filename){
 	bool res=false;
-	printf("Database %s\n", filename);
 	rc=sqlite3_open(filename, &db);
 	if(rc){
-		fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
+		fprintf(stderr, "Error: '%s' %s\n", filename, sqlite3_errmsg(db));
 	}else{
-		fprintf(stderr, "Ok\n");
+		fprintf(stderr, "Database %s\n", filename);
 		res=true;
 	}
 	return res;
 }
 
-void substr(char *src, int from, int to, char *dest){
-	for(int i=from, j=0; i<=to; i++, j++){
-		dest[j]=src[i];
+void exec(const char *str){
+	colexists=false;
+	rc=sqlite3_exec(db,str,result,0,&zErrMsg);
+	if(rc!=SQLITE_OK){
+		fprintf(stderr,"SQL Error: %s",zErrMsg);
+		sqlite3_free(zErrMsg);
 	}
+	printf("\n");
 }
 
-void command(char *str){
-	const int begin=3;
-	const int end=strlen(str);
-	
-	char *param=new char[end-begin];
-	substr(str,begin,end,param);
-	
-	if(strncmp(":c",str,2)==0){
-		connect(param);
+void show(const char *objname){
+	string obj(objname);
+	string str="select name from sqlite_schema where type='' and name not like 'sqlite_%'";
+	int i=str.find("'")+1;
+	str.insert(i, obj);
+	exec(str.c_str());
+}
+
+int command(const char *str){
+	int ret=0;
+	const int paramPos=3;
+	const int len=strlen(str)-paramPos+1;
+	char *param=new char[len];
+	strncpy(param, str+paramPos, len);
+	bool spc=param[0]==' '||param[strlen(param)-1]==' ';
+	if(!spc){
+		if(strncmp(str,":c",2)==0){
+			connect(param);
+		}else if(strncmp(str,":exit", 5)==0){
+			ret=1;
+		}else if(strncmp(str,":s",2)==0){
+			show(param);
+		}else{
+			printf("Command not found\n");
+		}
+	}else{
+		printf("Don't use space after or first parameter '%s'\n",param);
 	}
-	
 	free(param);
+	return ret;
 }
 
 bool delim(char c, char *str){
@@ -72,25 +91,19 @@ void prompt(){
 	const int len=64;
 	char str[len];
 	bool endscript=true;
+	int res;
 	while(true){
 		printf(endscript?"sql> ":"   > ");
 		fgets(str,len,stdin);
-		if(strncmp("exit",str,4)==0){
-			break;
-		}else if(strncmp(":",str,1)==0){
+		if(strncmp(":",str,1)==0){
 			str[strlen(str)-1]='\0';
-			command(str);
+			res=command(str);
+			if(res==1) break;
 		}else{
 			strcat(sqlstr, str);
 			endscript=delim(';',str);
 			if(endscript){
-				colexists=false;
-				rc=sqlite3_exec(db,sqlstr,result,0,&zErrMsg);
-				if(rc!=SQLITE_OK){
-					fprintf(stderr,"SQL Error: %s",zErrMsg);
-					sqlite3_free(zErrMsg);
-				}
-				printf("\n");
+				exec(sqlstr);
 				sqlstr[0]='\0';
 			}
 		}
