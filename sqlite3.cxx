@@ -63,7 +63,7 @@ int command(const char *str){
 	if(!spc){
 		if(strncmp(str,":c",2)==0){
 			connect(param);
-		}else if(strncmp(str,":exit", 5)==0){
+		}else if(strncmp(str,":quit", 5)==0){
 			ret=1;
 		}else if(strncmp(str,":s",2)==0){
 			show(param);
@@ -77,13 +77,10 @@ int command(const char *str){
 	return ret;
 }
 
-bool delim(char c, char *str){
-	bool found=false;
-	for(int i=0; i<=strlen(str); i++){
-		found=c==str[i];
-		if(found) break;
-	}
-	return found;
+bool delim(char s, char *str){
+	string data(str);
+	int i=data.find(s);
+	return i>-1;
 }
 
 void prompt(){
