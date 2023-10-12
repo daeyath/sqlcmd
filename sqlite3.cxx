@@ -61,11 +61,11 @@ int command(const char *str){
 	strncpy(param, str+paramPos, len);
 	bool spc=param[0]==' '||param[strlen(param)-1]==' ';
 	if(!spc){
-		if(strncmp(str,":c",2)==0){
+		if(strncmp(str,":c ",3)==0){
 			connect(param);
 		}else if(strncmp(str,":quit", 5)==0){
 			ret=1;
-		}else if(strncmp(str,":s",2)==0){
+		}else if(strncmp(str,":s ",3)==0){
 			show(param);
 		}else{
 			printf("Command not found\n");
@@ -79,8 +79,8 @@ int command(const char *str){
 
 bool delim(char s, char *str){
 	string data(str);
-	int i=data.find(s);
-	return i>-1;
+	int loc = data.find(s);
+	return (loc > -1);
 }
 
 void prompt(){
