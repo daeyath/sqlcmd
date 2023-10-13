@@ -29,7 +29,7 @@ bool connect(const char *filename){
 	if(rc){
 		fprintf(stderr, "Error: '%s' %s\n", filename, sqlite3_errmsg(db));
 	}else{
-		fprintf(stderr, "Database %s\n", filename);
+		fprintf(stderr, "Database %s connected\n", filename);
 		res=true;
 	}
 	return res;
@@ -43,6 +43,12 @@ void exec(const char *str){
 		sqlite3_free(zErrMsg);
 	}
 	printf("\n");
+}
+
+void help(){
+	printf(":c file - connect to database file\n");
+	printf(":s object - show objects, ex: :s table\n");
+	printf(":quit - exit and close database\n");
 }
 
 void show(const char *objname){
@@ -67,6 +73,8 @@ int command(const char *str){
 			ret=1;
 		}else if(strncmp(str,":s ",3)==0){
 			show(param);
+		}else if(strcmp(str,":h")==0){
+			help();
 		}else{
 			printf("Command not found\n");
 		}
@@ -113,6 +121,7 @@ void close(){
 
 int main(int argc, char *argv[])
 {
+	printf("SQLCMD Version Alpha\nType :h for help\n");
 	char *fname;
 	if(argv[1]){
 		fname=argv[1];
