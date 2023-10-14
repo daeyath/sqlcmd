@@ -29,7 +29,7 @@ bool connect(const char *filename){
 	if(rc){
 		fprintf(stderr, "Error: '%s' %s\n", filename, sqlite3_errmsg(db));
 	}else{
-		fprintf(stderr, "Database %s connected\n", filename);
+		fprintf(stderr, "Database '%s' connected\n", filename);
 		res=true;
 	}
 	return res;
@@ -48,7 +48,7 @@ void exec(const char *str){
 void help(){
 	printf(":c file - connect to database file\n");
 	printf(":s object - show objects, ex: :s table\n");
-	printf(":quit - exit and close database\n");
+	printf(":q - exit and close database\n");
 }
 
 void show(const char *objname){
@@ -69,14 +69,14 @@ int command(const char *str){
 	if(!spc){
 		if(strncmp(str,":c ",3)==0){
 			connect(param);
-		}else if(strncmp(str,":quit", 5)==0){
+		}else if(strcmp(str,":q")==0){
 			ret=1;
 		}else if(strncmp(str,":s ",3)==0){
 			show(param);
 		}else if(strcmp(str,":h")==0){
 			help();
 		}else{
-			printf("Command not found\n");
+			printf("'%s' command not found\n", str);
 		}
 	}else{
 		printf("Don't use space after or first parameter '%s'\n",param);
