@@ -6,24 +6,8 @@ using namespace std;
 sqlite3 *db;
 char *zErrMsg=0;
 int rc;
-bool colexists;
 
-static int result(void *NotUsed, int argc, char **argv, char **azColName){
-	int i;
-	if(!colexists){
-		for(i=0; i<argc; i++){
-			printf("%s\t", azColName[i]);
-		}
-		colexists=true;
-	}
-	printf("\n");
-	for(i=0; i<argc; i++){
-		printf("%s\t", argv[i] ? argv[i] : "NULL");
-	}
-	return 0;
-}
-
-bool connect(const char *filename){
+bool connectdb(const char *filename){
 	bool res=false;
 	rc=sqlite3_open(filename, &db);
 	if(rc){
@@ -36,39 +20,96 @@ bool connect(const char *filename){
 }
 
 void exec(const char *str){
-	colexists=false;
-	rc=sqlite3_exec(db,str,result,0,&zErrMsg);
+	char **azResult;
+	int nRow, nColumn;
+	rc=sqlite3_get_table(db, str, &azResult, &nRow, &nColumn, &zErrMsg);
 	if(rc!=SQLITE_OK){
-		fprintf(stderr,"SQL Error: %s",zErrMsg);
+		fprintf(stderr,"SQL Error: %s\n",zErrMsg);
 		sqlite3_free(zErrMsg);
+	}else if(nRow>0){
+		int *lenCol=new int[nColumn];
+		for(int i=0; i<nColumn; i++)lenCol[i]=0;
+		int k=-1;
+		for(int i=0; i<nRow+1; i++){
+			for(int j=0; j<nColumn; j++){
+				k++;
+				int l=azResult[k]==NULL?0:strlen(azResult[k]);
+				if(lenCol[j]<l)lenCol[j]=l;
+			}
+		}	
+		k=-1;
+		for(int i=0; i<nRow+1; i++){
+			for(int j=0; j<nColumn; j++){
+				k++;
+				printf("%-*s", lenCol[j], azResult[k]);
+				if(j<nColumn-1)printf(" ");
+			}
+			printf("\n");
+			if(i==0){
+				for(int j=0; j<nColumn; j++){
+					for(int k=0; k<lenCol[j]; k++)printf("=");
+					if(j<nColumn-1)printf(" ");
+				}
+				printf("\n");
+			}
+		}
+		free(lenCol);
+		printf("(%i rows)\n", nRow);
 	}
-	printf("\n");
+	sqlite3_free_table(azResult);
 }
 
 void help(){
 	printf(":c file - connect to database file\n");
+	printf(":e sqlfile - execute sqlfile\n");
 	printf(":s object - show objects, ex: :s table\n");
 	printf(":q - exit and close database\n");
 }
 
 void show(const char *objname){
-	string obj(objname);
-	string str="select name from sqlite_schema where type='' and name not like 'sqlite_%'";
-	int i=str.find("'")+1;
-	str.insert(i, obj);
-	exec(str.c_str());
+	char* str[5];
+	char obj[strlen(objname)];
+	strcpy(obj, objname);
+	str[0]="select name as \"";
+	str[1]=obj;
+	str[2]="\" from sqlite_schema where type='";
+	str[3]=obj;
+	str[4]="' and name not like 'sqlite_%'";
+	int len=0;
+	for(int i=0; i<=4; i++)len+=strlen(str[i]);
+	char sql[len];
+	for(int i=0; i<=4; i++)strcat(sql, str[i]);
+	exec(sql);
+}
+
+void execfile(const char* fname){
+	FILE *afile=fopen(fname, "r");
+	if(afile !=NULL){
+		char sqlstr[1024]; sqlstr[0]=0;
+		const int len=2;
+		char str[len];
+		while(fgets(str, len, afile)){
+			strcat(sqlstr, str);
+		}
+		fclose(afile);
+		exec(sqlstr);
+	}else{
+		printf("File '%s' not found.\n", fname);
+	}
 }
 
 int command(const char *str){
 	int ret=0;
-	const int paramPos=3;
-	const int len=strlen(str)-paramPos+1;
-	char *param=new char[len];
-	strncpy(param, str+paramPos, len);
+	const int pos=3;
+	const int len=strlen(str)-pos+1;
+	char* param=new char[len];
+	strncpy(param, str+pos, len);
 	bool spc=param[0]==' '||param[strlen(param)-1]==' ';
 	if(!spc){
 		if(strncmp(str,":c ",3)==0){
-			connect(param);
+			connectdb(param);
+		}else if(strncmp(str, ":e ",3)==0){
+			execfile(param);
 		}else if(strcmp(str,":q")==0){
 			ret=1;
 		}else if(strncmp(str,":s ",3)==0){
@@ -83,12 +124,6 @@ int command(const char *str){
 	}
 	free(param);
 	return ret;
-}
-
-bool delim(char s, char *str){
-	string data(str);
-	int loc = data.find(s);
-	return (loc > -1);
 }
 
 void prompt(){
@@ -106,7 +141,7 @@ void prompt(){
 			if(res==1) break;
 		}else{
 			strcat(sqlstr, str);
-			endscript=delim(';',str);
+			endscript=strstr(str,";")!=NULL;
 			if(endscript){
 				exec(sqlstr);
 				sqlstr[0]='\0';
@@ -115,19 +150,20 @@ void prompt(){
 	}
 }
 
-void close(){
+void closedb(){
 	sqlite3_close(db);
 }
 
 int main(int argc, char *argv[])
 {
 	printf("SQLCMD Version Alpha\nType :h for help\n");
-	char *fname;
+	char* fname=new char[2];
 	if(argv[1]){
-		fname=argv[1];
+		strcpy(fname,argv[1]);
 	}else{
-		fname=":memory:";
+		strcpy(fname,":memory:");
 	}
-	if(connect(fname)) prompt();
-	close();
+	if(connectdb(fname)) prompt();
+	free(fname);
+	closedb();
 }
