@@ -1,4 +1,4 @@
-#include <string>
+#include <iostream>
 #include <sqlite3.h>
 
 using namespace std;
@@ -67,25 +67,28 @@ void help(){
 }
 
 void show(const char *objname){
-	char* str[5];
+	char *str[5];
 	char obj[strlen(objname)];
 	strcpy(obj, objname);
-	str[0]="select name as \"";
+	char str0[]="select name as \"";
+	str[0]=str0;
 	str[1]=obj;
-	str[2]="\" from sqlite_schema where type='";
+	char str2[]="\" from sqlite_schema\nwhere type='";
+	str[2]=str2;
 	str[3]=obj;
-	str[4]="' and name not like 'sqlite_%'";
+	char str4[]="' and name not like 'sqlite_%'";
+	str[4]=str4;
 	int len=0;
-	for(int i=0; i<=4; i++)len+=strlen(str[i]);
-	char sql[len];
-	for(int i=0; i<=4; i++)strcat(sql, str[i]);
+	for(int i=0; i<5; i++)len+=strlen(str[i]);
+	char sql[len]; sql[0]='\0';
+	for(int i=0; i<5; i++)strcat(sql, str[i]);
 	exec(sql);
 }
 
-void execfile(const char* fname){
+void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile !=NULL){
-		char sqlstr[1024]; sqlstr[0]=0;
+		char sqlstr[1024]="";
 		const int len=2;
 		char str[len];
 		while(fgets(str, len, afile)){
@@ -98,11 +101,11 @@ void execfile(const char* fname){
 	}
 }
 
-int command(const char *str){
+int runinternalcmd(const char *str){
 	int ret=0;
 	const int pos=3;
 	const int len=strlen(str)-pos+1;
-	char* param=new char[len];
+	char param[len];
 	strncpy(param, str+pos, len);
 	bool spc=param[0]==' '||param[strlen(param)-1]==' ';
 	if(!spc){
@@ -122,32 +125,45 @@ int command(const char *str){
 	}else{
 		printf("Don't use space after or first parameter '%s'\n",param);
 	}
-	free(param);
 	return ret;
 }
 
 void prompt(){
-	char sqlstr[1024]="";
-	const int len=64;
-	char str[len];
-	bool endscript=true;
-	int res;
+	char *sqlstr=NULL;
+	const int maxlen=128;
+	char str[maxlen];
+	bool endsql=true;
+	int ric, dynlen=0;
 	while(true){
-		printf(endscript?"sql> ":"   > ");
-		fgets(str,len,stdin);
+		printf(endsql?"sql> ":"   > ");
+		fgets(str,maxlen,stdin);
 		if(strncmp(":",str,1)==0){
 			str[strlen(str)-1]='\0';
-			res=command(str);
-			if(res==1) break;
+			ric=runinternalcmd(str);
+			if(ric==1) break;
 		}else{
-			strcat(sqlstr, str);
-			endscript=strstr(str,";")!=NULL;
-			if(endscript){
-				exec(sqlstr);
+			dynlen+=strlen(str);
+			if(sqlstr==NULL){
+				sqlstr=(char*)malloc(dynlen);
 				sqlstr[0]='\0';
+			}else{
+				sqlstr=(char*)realloc(sqlstr, dynlen);
+			}
+			if(sqlstr==NULL){
+				printf("Not enough memory\n");
+				break;
+			}else{
+				strcat(sqlstr, str);
+				endsql=strstr(str,";")!=NULL;
+				if(endsql){
+					exec(sqlstr);
+					dynlen=0;
+					strcpy(sqlstr,"");
+				}
 			}
 		}
 	}
+	free(sqlstr);
 }
 
 void closedb(){
@@ -157,7 +173,7 @@ void closedb(){
 int main(int argc, char *argv[])
 {
 	printf("SQLCMD Version Alpha\nType :h for help\n");
-	char* fname=new char[2];
+	char *fname=new char[2];
 	if(argv[1]){
 		strcpy(fname,argv[1]);
 	}else{
