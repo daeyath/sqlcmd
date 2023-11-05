@@ -1,11 +1,11 @@
 #include <iostream>
 #include <sqlite3.h>
 
-using namespace std;
-
 sqlite3 *db;
 char *zErrMsg=0;
 int rc;
+const char nem[]="Not enough memory.\n";
+char *sqlstr=NULL;
 
 bool connectdb(const char *filename){
 	bool res=false;
@@ -13,7 +13,7 @@ bool connectdb(const char *filename){
 	if(rc){
 		fprintf(stderr, "Error: '%s' %s\n", filename, sqlite3_errmsg(db));
 	}else{
-		fprintf(stderr, "Database '%s' connected\n", filename);
+		fprintf(stderr, "Database %s connected\n", filename);
 		res=true;
 	}
 	return res;
@@ -55,6 +55,10 @@ void exec(const char *str){
 		}
 		free(lenCol);
 		printf("(%i rows)\n", nRow);
+	}else{
+		int changes=sqlite3_changes(db);
+		if(changes>0)
+			printf("%i row changes\n", changes);
 	}
 	sqlite3_free_table(azResult);
 }
@@ -88,14 +92,29 @@ void show(const char *objname){
 void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile !=NULL){
-		char sqlstr[1024]="";
-		const int len=2;
-		char str[len];
-		while(fgets(str, len, afile)){
-			strcat(sqlstr, str);
+		const int maxl=128;
+		char str[maxl];
+		int dynlen=0;
+		while(fgets(str, maxl, afile)){
+			dynlen+=strlen(str);
+			if(sqlstr==NULL){
+				sqlstr=(char*)malloc(dynlen);
+				sqlstr[0]='\0';
+			}else{
+				sqlstr=(char*)realloc(sqlstr, dynlen);
+			}
+			if(sqlstr==NULL){
+				printf(nem);
+				break;
+			}else{
+				strcat(sqlstr, str);
+			}
 		}
 		fclose(afile);
-		exec(sqlstr);
+		if(sqlstr!=NULL){
+			exec(sqlstr);
+			strcpy(sqlstr, "");
+		}
 	}else{
 		printf("File '%s' not found.\n", fname);
 	}
@@ -129,41 +148,41 @@ int runinternalcmd(const char *str){
 }
 
 void prompt(){
-	char *sqlstr=NULL;
-	const int maxlen=128;
-	char str[maxlen];
+	char *str=NULL;
 	bool endsql=true;
-	int ric, dynlen=0;
+	int ric, dyn=0, len;
+	size_t buflen=0;
 	while(true){
-		printf(endsql?"sql> ":"   > ");
-		fgets(str,maxlen,stdin);
+		printf(endsql?"sql> ":"   | ");
+		len=getline(&str,&buflen,stdin);
 		if(strncmp(":",str,1)==0){
-			str[strlen(str)-1]='\0';
+			str[len-1]='\0';
 			ric=runinternalcmd(str);
 			if(ric==1) break;
 		}else{
-			dynlen+=strlen(str);
+			dyn+=buflen;
 			if(sqlstr==NULL){
-				sqlstr=(char*)malloc(dynlen);
+				sqlstr=(char*)malloc(dyn);
 				sqlstr[0]='\0';
 			}else{
-				sqlstr=(char*)realloc(sqlstr, dynlen);
+				sqlstr=(char*)realloc(sqlstr, dyn);
 			}
 			if(sqlstr==NULL){
-				printf("Not enough memory\n");
+				printf(nem);
 				break;
 			}else{
 				strcat(sqlstr, str);
 				endsql=strstr(str,";")!=NULL;
 				if(endsql){
 					exec(sqlstr);
-					dynlen=0;
+					dyn=0;
 					strcpy(sqlstr,"");
 				}
 			}
 		}
 	}
 	free(sqlstr);
+	free(str);
 }
 
 void closedb(){
