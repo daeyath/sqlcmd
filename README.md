@@ -4,5 +4,4 @@ I haven't found sqlite with command prompt in Google play store.  So I made it s
 
 sqlcmd is not similar to Microsoft SQL Server's sqlcmd, it's just a personal or hobby project.
 
-Compile with command `g++ -o sqlcmd sqlite3.cxx` and run with command 
-`./sqlcmd`
+Run the command `g++ -o sqlcmd sqlite3.cxx` and then run the command `./sqlcmd`
