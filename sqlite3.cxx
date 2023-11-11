@@ -27,7 +27,7 @@ void exec(const char *str){
 		fprintf(stderr,"SQL Error: %s\n",zErrMsg);
 		sqlite3_free(zErrMsg);
 	}else if(nRow>0){
-		int *lenCol=new int[nColumn];
+		int lenCol[nColumn];
 		for(int i=0; i<nColumn; i++)lenCol[i]=0;
 		int z=-1;
 		for(int i=0; i<nRow+1; i++){
@@ -53,7 +53,6 @@ void exec(const char *str){
 				printf("\n");
 			}
 		}
-		free(lenCol);
 		printf("(%i rows)\n", nRow);
 	}else{
 		int changes=sqlite3_changes(db);
@@ -93,10 +92,10 @@ void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile !=NULL){
 		const int maxl=128;
-		char line[maxl];
+		char *str=new char[maxl];
 		int dyn=0;
-		while(fgets(line, maxl, afile)){
-			dyn+=strlen(line);
+		while(fgets(str, maxl, afile)){
+			dyn+=strlen(str);
 			if(sqlstr==NULL){
 				sqlstr=(char*)malloc(dyn);
 				sqlstr[0]='\0';
@@ -107,13 +106,14 @@ void execfile(const char *fname){
 				printf(nem);
 				break;
 			}else{
-				strcat(sqlstr, line);
+				strcat(sqlstr, str);
 			}
 		}
+		free(str);
 		fclose(afile);
 		if(sqlstr!=NULL){
 			exec(sqlstr);
-			strcpy(sqlstr, "");
+			sqlstr[0]='\0';
 		}
 	}else{
 		printf("File '%s' not found.\n", fname);
@@ -121,10 +121,10 @@ void execfile(const char *fname){
 }
 
 int runinternalcmd(char *str){
-	int ret=0, i=0;
-	char delim[]=" ";
+	int value=0, i=0;
 	char *param[2];
 	for(int i=0; i<2; i++)param[i]=0;
+	char delim[]=" ";
 	char *item=strtok(str, delim);
 	while(item!=NULL){
 		param[i]=item;
@@ -136,7 +136,7 @@ int runinternalcmd(char *str){
 	}else if(strcmp(param[0], ":e")==0){
 		execfile(param[1]);
 	}else if(strcmp(param[0],":q")==0){
-		ret=1;
+		value=1;
 	}else if(strcmp(param[0],":s")==0){
 		show(param[1]);
 	}else if(strcmp(param[0],":h")==0){
@@ -144,21 +144,20 @@ int runinternalcmd(char *str){
 	}else{
 		printf("'%s' command not found\n", str);
 	}
-	return ret;
+	return value;
 }
 
 void prompt(){
 	char *str=NULL;
 	bool endsql=true;
-	int ric, dyn=0, len;
+	int ric=0, dyn=0, len;
 	size_t buflen=0;
-	while(true){
+	while(ric!=1){
 		printf(endsql?"sql> ":"   | ");
 		len=getline(&str,&buflen,stdin);
 		if(strncmp(":",str,1)==0){
 			str[len-1]='\0';
 			ric=runinternalcmd(str);
-			if(ric==1) break;
 		}else{
 			dyn+=buflen;
 			if(sqlstr==NULL){
@@ -176,7 +175,7 @@ void prompt(){
 				if(endsql){
 					exec(sqlstr);
 					dyn=0;
-					strcpy(sqlstr,"");
+					sqlstr[0]='\0';
 				}
 			}
 		}
@@ -191,11 +190,13 @@ void closedb(){
 
 int main(int argc, char *argv[])
 {
-	printf("SQLCMD Version Alpha\nType :h for help\n");
-	char *fname=new char[2];
+	printf("SQLCMD Version 0.0.1\nType :h for help\n");
+	char *fname;
 	if(argv[1]){
+		fname=new char[strlen(argv[1])];
 		strcpy(fname,argv[1]);
 	}else{
+		fname=new char[9];
 		strcpy(fname,":memory:");
 	}
 	if(connectdb(fname)) prompt();
