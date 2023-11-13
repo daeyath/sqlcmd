@@ -1,4 +1,5 @@
 #include <iostream>
+#include <dirent.h>
 #include <sqlite3.h>
 
 sqlite3 *db;
@@ -65,6 +66,7 @@ void exec(const char *str){
 void help(){
 	printf(":c file - connect to database file\n");
 	printf(":e sqlfile - execute sqlfile\n");
+	printf(":ls [path] - list directory\n");
 	printf(":s object - show objects, ex: :s table\n");
 	printf(":q - exit and close database\n");
 }
@@ -86,6 +88,26 @@ void show(const char *objname){
 	char sql[len]; sql[0]='\0';
 	for(int i=0; i<5; i++)strcat(sql, str[i]);
 	exec(sql);
+}
+
+void listdir(const char *path){
+	ssize_t i=0;
+	DIR *name;
+	struct dirent *v;
+	name=opendir(path);
+	if(name){
+		while((v=readdir(name))!=NULL){
+			char *fname=v->d_name;
+			bool valid=strcmp(fname, ".")!=0;
+			valid=valid && strcmp(fname, "..")!=0;
+			if(valid){
+				printf("%s\n", fname);
+				i++;
+			}
+		}
+		closedir(name);
+	}
+	printf("(%i files)\n", i);
 }
 
 void execfile(const char *fname){
@@ -133,12 +155,23 @@ int runinternalcmd(char *str){
 	}
 	if(strcmp(param[0],":c")==0){
 		connectdb(param[1]);
-	}else if(strcmp(param[0], ":e")==0){
+	}else if(strcmp(param[0],":e")==0){
 		execfile(param[1]);
 	}else if(strcmp(param[0],":q")==0){
 		value=1;
 	}else if(strcmp(param[0],":s")==0){
-		show(param[1]);
+		if(param[1]!=NULL) show(param[1]);
+	}else if(strcmp(param[0],":ls")==0){
+		char *path;
+		if(param[1]!=NULL){
+			path=new char[strlen(param[1])];
+			strcpy(path, param[1]);
+		}else{
+			path=new char[2];
+			strcpy(path, ".");
+		}
+		listdir(path);
+		free(path);
 	}else if(strcmp(param[0],":h")==0){
 		help();
 	}else{
@@ -190,7 +223,8 @@ void closedb(){
 
 int main(int argc, char *argv[])
 {
-	printf("SQLCMD Version 0.0.1\nType :h for help\n");
+	const char ver[]="0.0.2";
+	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
 	if(argv[1]){
 		fname=new char[strlen(argv[1])];
