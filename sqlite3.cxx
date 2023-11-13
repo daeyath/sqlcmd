@@ -98,8 +98,7 @@ void listdir(const char *path){
 	if(name){
 		while((v=readdir(name))!=NULL){
 			char *fname=v->d_name;
-			bool valid=strcmp(fname, ".")!=0;
-			valid=valid && strcmp(fname, "..")!=0;
+			bool valid=strncmp(fname, ".", 1)!=0;
 			if(valid){
 				printf("%s\n", fname);
 				i++;
@@ -223,7 +222,7 @@ void closedb(){
 
 int main(int argc, char *argv[])
 {
-	const char ver[]="0.0.2";
+	const char ver[]="0.0.2-1";
 	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
 	if(argv[1]){
