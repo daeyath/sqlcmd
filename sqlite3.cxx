@@ -1,5 +1,4 @@
 #include <iostream>
-#include <dirent.h>
 #include <sqlite3.h>
 
 sqlite3 *db;
@@ -66,7 +65,7 @@ void exec(const char *str){
 void help(){
 	printf(":c file - connect to database file\n");
 	printf(":e sqlfile - execute sqlfile\n");
-	printf(":ls [path] - list directory\n");
+	printf(":r command - run shell command\n");
 	printf(":s object - show objects, ex: :s table\n");
 	printf(":q - exit and close database\n");
 }
@@ -90,33 +89,14 @@ void show(const char *objname){
 	exec(sql);
 }
 
-void listdir(const char *path){
-	ssize_t i=0;
-	DIR *name;
-	struct dirent *v;
-	name=opendir(path);
-	if(name){
-		while((v=readdir(name))!=NULL){
-			char *fname=v->d_name;
-			bool valid=strncmp(fname, ".", 1)!=0;
-			if(valid){
-				printf("%s\n", fname);
-				i++;
-			}
-		}
-		closedir(name);
-	}
-	printf("(%i files)\n", i);
-}
-
 void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile !=NULL){
 		const int maxl=128;
-		char *str=new char[maxl];
+		char line[maxl];
 		int dyn=0;
-		while(fgets(str, maxl, afile)){
-			dyn+=strlen(str);
+		while(fgets(line, maxl, afile)){
+			dyn+=strlen(line);
 			if(sqlstr==NULL){
 				sqlstr=(char*)malloc(dyn);
 				sqlstr[0]='\0';
@@ -127,10 +107,9 @@ void execfile(const char *fname){
 				printf(nem);
 				break;
 			}else{
-				strcat(sqlstr, str);
+				strcat(sqlstr, line);
 			}
 		}
-		free(str);
 		fclose(afile);
 		if(sqlstr!=NULL){
 			exec(sqlstr);
@@ -142,7 +121,16 @@ void execfile(const char *fname){
 }
 
 int runinternalcmd(char *str){
-	int value=0, i=0;
+	int value=0;
+	// external
+	if(strncmp(":r", str, 2)==0){
+		char command[strlen(str)-2];
+		strncpy(command, str+2, strlen(str));
+		system(command);
+		return value;
+	}
+	// internal
+	int i=0;
 	char *param[2];
 	for(int i=0; i<2; i++)param[i]=0;
 	char delim[]=" ";
@@ -160,17 +148,6 @@ int runinternalcmd(char *str){
 		value=1;
 	}else if(strcmp(param[0],":s")==0){
 		if(param[1]!=NULL) show(param[1]);
-	}else if(strcmp(param[0],":ls")==0){
-		char *path;
-		if(param[1]!=NULL){
-			path=new char[strlen(param[1])];
-			strcpy(path, param[1]);
-		}else{
-			path=new char[2];
-			strcpy(path, ".");
-		}
-		listdir(path);
-		free(path);
 	}else if(strcmp(param[0],":h")==0){
 		help();
 	}else{
@@ -222,7 +199,7 @@ void closedb(){
 
 int main(int argc, char *argv[])
 {
-	const char ver[]="0.0.2-1";
+	const char ver[]="0.0.4";
 	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
 	if(argv[1]){
