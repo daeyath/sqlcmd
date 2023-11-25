@@ -19,6 +19,10 @@ bool connectdb(const char *filename){
 	return res;
 }
 
+void closedb(){
+	sqlite3_close(db);
+}
+
 void exec(const char *str){
 	char **azResult;
 	int nRow, nColumn;
@@ -132,7 +136,6 @@ int runinternalcmd(char *str){
 	// internal
 	int i=0;
 	char *param[2];
-	for(int i=0; i<2; i++)param[i]=0;
 	char delim[]=" ";
 	char *item=strtok(str, delim);
 	while(item!=NULL){
@@ -141,6 +144,7 @@ int runinternalcmd(char *str){
 		item=strtok(NULL, delim);
 	}
 	if(strcmp(param[0],":c")==0){
+		closedb();
 		connectdb(param[1]);
 	}else if(strcmp(param[0],":e")==0){
 		execfile(param[1]);
@@ -193,23 +197,18 @@ void prompt(){
 	free(str);
 }
 
-void closedb(){
-	sqlite3_close(db);
-}
-
 int main(int argc, char *argv[])
 {
-	const char ver[]="0.0.4";
+	const char ver[]="0.0.5";
 	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
-	if(argv[1]){
-		fname=new char[strlen(argv[1])];
-		strcpy(fname,argv[1]);
-	}else{
-		fname=new char[9];
-		strcpy(fname,":memory:");
+	if(argv[1]){fname=argv[1];}
+	else{
+		char mem[]=":memory:";
+		fname=mem;
 	}
-	if(connectdb(fname)) prompt();
-	free(fname);
-	closedb();
+	if(connectdb(fname)){
+		prompt();
+		closedb();
+	}
 }
