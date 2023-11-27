@@ -199,16 +199,20 @@ void prompt(){
 
 int main(int argc, char *argv[])
 {
-	const char ver[]="0.0.5";
+	const char ver[]="0.0.5-1";
 	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
-	if(argv[1]){fname=argv[1];}
+	if(argv[1])
+		fname=argv[1];
 	else{
 		char mem[]=":memory:";
 		fname=mem;
 	}
+	int state=1;
 	if(connectdb(fname)){
 		prompt();
 		closedb();
+		state=0;
 	}
+	return state;
 }
