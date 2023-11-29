@@ -19,8 +19,10 @@ bool connectdb(const char *filename){
 	return res;
 }
 
-void closedb(){
-	sqlite3_close(db);
+bool closedb(){
+	bool closed = sqlite3_close(db)==SQLITE_OK;
+	if(!closed) printf("The database can not be closed yet\n");
+	return closed;
 }
 
 void exec(const char *str){
@@ -144,8 +146,7 @@ int runinternalcmd(char *str){
 		item=strtok(NULL, delim);
 	}
 	if(strcmp(param[0],":c")==0){
-		closedb();
-		connectdb(param[1]);
+		if(closedb()) connectdb(param[1]);
 	}else if(strcmp(param[0],":e")==0){
 		execfile(param[1]);
 	}else if(strcmp(param[0],":q")==0){
@@ -171,6 +172,7 @@ void prompt(){
 		if(strncmp(":",str,1)==0){
 			str[len-1]='\0';
 			ric=runinternalcmd(str);
+			if(ric==1) if(!closedb()) ric=0;
 		}else{
 			dyn+=buflen;
 			if(sqlstr==NULL){
@@ -199,7 +201,7 @@ void prompt(){
 
 int main(int argc, char *argv[])
 {
-	const char ver[]="0.0.5-1";
+	const char ver[]="0.0.5-2";
 	printf("SQLCMD Version %s\nType :h for help\n", ver);
 	char *fname;
 	if(argv[1])
@@ -211,7 +213,6 @@ int main(int argc, char *argv[])
 	int state=1;
 	if(connectdb(fname)){
 		prompt();
-		closedb();
 		state=0;
 	}
 	return state;
