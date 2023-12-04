@@ -6,6 +6,8 @@ Run `clang -o sqlcmd sqlite3.cxx` to compile source code and then run `./sqlcmd`
 
 Usually, to test data entry, you can use a shell script.  As support, I provide a small program, namely execsql, which can be used together with a shell script. To using it, compile source code with `clang -o execsql execsql.cxx`, and you may use it in your shell script as:
 
-`export sqlconnection`
-`sqlconnection="test.file"`
-`./execsql "select * from atable"`
+```
+export sqlconnection
+sqlconnection="test.file"
+./execsql "select * from atable"
+```
