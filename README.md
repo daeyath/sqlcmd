@@ -4,7 +4,7 @@ After my job is finished at the end of 2022 I will replace my smartphone as a me
 
 Run `g++ -o sqlcmd sqlite3.cxx` to compile source code and then run `./sqlcmd` in your favorite shell.
 
-Usually, to test data entry, you can use a shell script.  As support, I provide a small program, namely execsql, which can be used together with a shell script. To using it, compile with `g++ -o execsql execsql.cxx` and use it in your shell script as:
+Usually, to test data entry, you can use a shell script.  As support, I provide a small program, namely execsql, which can be used together with a shell script. To using it, compile source code with `g++ -o execsql execsql.cxx`, and you may use it in your shell script as:
 
 `export sqlconnection`
 `sqlconnection="test.file"`
