@@ -2,8 +2,6 @@
 #include <sqlite3.h>
 #include "database.cxx"
 
-const char appname[]="SQLCMD";
-const char ver[]="0.1.0";
 const char nem[]="Not enough memory!\nTry dividing the SQL into several parts";
 char *sqlstr=NULL;
 

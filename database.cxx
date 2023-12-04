@@ -1,3 +1,6 @@
+const char appname[]="SQLCMD";
+const char ver[]="0.1.0";
+
 sqlite3 *db;
 char *zErrMsg=0;
 
