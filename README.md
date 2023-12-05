@@ -11,3 +11,5 @@ export sqlconnection
 sqlconnection="test.file"
 ./execsql "select * from atable"
 ```
+
+But execsql only supports transactions within its own quotes. Does not apply after next execsql.
