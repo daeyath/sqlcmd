@@ -3,6 +3,7 @@
 #include "database.cxx"
 
 const char nem[]="Not enough memory!\nTry dividing the SQL into several parts";
+char *str=NULL;
 char *sqlstr=NULL;
 
 void help(){
@@ -36,10 +37,10 @@ void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile !=NULL){
 		const int maxl=128;
-		char line[maxl];
+		str=(char*)realloc(str,maxl);
 		int dyn=0;
-		while(fgets(line, maxl, afile)){
-			dyn+=strlen(line);
+		while(fgets(str, maxl, afile)){
+			dyn+=strlen(str);
 			if(sqlstr==NULL){
 				sqlstr=(char*)malloc(dyn);
 				sqlstr[0]='\0';
@@ -50,7 +51,7 @@ void execfile(const char *fname){
 				printf(nem);
 				break;
 			}else{
-				strcat(sqlstr, line);
+				strcat(sqlstr, str);
 			}
 		}
 		fclose(afile);
@@ -99,7 +100,6 @@ int runinternalcmd(char *str){
 }
 
 void prompt(){
-	char *str=NULL;
 	bool endsql=true;
 	int ric=0, dyn=0, len;
 	size_t buflen=0;
