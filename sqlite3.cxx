@@ -15,21 +15,10 @@ void help(){
 }
 
 void show(const char *objname){
-	char *str[5];
-	char obj[strlen(objname)];
-	strcpy(obj, objname);
-	char str0[]="select name as \"";
-	str[0]=str0;
-	str[1]=obj;
-	char str2[]="\" from sqlite_schema\nwhere type='";
-	str[2]=str2;
-	str[3]=obj;
-	char str4[]="' and name not like 'sqlite_%'";
-	str[4]=str4;
-	int len=0;
-	for(int i=0; i<5; i++)len+=strlen(str[i]);
-	char sql[len]; sql[0]='\0';
-	for(int i=0; i<5; i++)strcat(sql, str[i]);
+	char str[]="select name as \"%s\" from sqlite_schema where type='%s'";
+	char sql[1024];
+	sprintf(sql, str, objname, objname);
+	strcat(sql, " and name not like 'sqlite_%'");
 	exec(sql);
 }
 

@@ -1,5 +1,5 @@
 const char appname[]="SQLCMD";
-const char ver[]="0.1.0";
+const char ver[]="0.1.1";
 
 sqlite3 *db;
 char *zErrMsg=0;
@@ -55,9 +55,14 @@ int exec(const char *str){
 		}
 		printf("(%i rows)\n", nRow);
 	}else{
-		int changes=sqlite3_changes(db);
-		if(changes>0)
-			printf("%i row changes\n", changes);
+		if(strncmp(str,"insert",6)==0
+			||strncmp(str,"update",6)==0
+			||strncmp(str,"delete",6)==0){
+			int changes=sqlite3_changes(db);
+			if(changes>0){
+				printf("%i row changes\n", changes);
+			}
+		}
 	}
 	sqlite3_free_table(azResult);
 	return state;
