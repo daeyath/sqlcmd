@@ -7,11 +7,12 @@ char *str=NULL;
 char *sqlstr=NULL;
 
 void help(){
-	printf(":c file - connect to database file\n");
-	printf(":e sqlfile - execute sqlfile\n");
-	printf(":r command - run shell command\n");
-	printf(":s object - show objects, ex: :s table\n");
-	printf(":q - exit and close database\n");
+	printf(":c file -> connect to database file\n");
+	printf(":e sqlfile -> execute sqlfile\n");
+	printf(":r command -> run shell command\n");
+	printf(":s object -> show objects, ex: :s table\n");
+	printf(":l -> show license\n");
+	printf(":q -> exit and close database\n");
 }
 
 void show(const char *objname){
@@ -32,14 +33,15 @@ void execfile(const char *fname){
 			dyn+=strlen(str);
 			if(sqlstr==NULL){
 				sqlstr=(char*)malloc(dyn);
-				sqlstr[0]='\0';
+				if(sqlstr!=NULL)sqlstr[0]='\0';
+				else{
+					printf(nem);
+					break;
+				}
 			}else{
 				sqlstr=(char*)realloc(sqlstr, dyn);
 			}
-			if(sqlstr==NULL){
-				printf(nem);
-				break;
-			}else{
+			if(sqlstr!=NULL){
 				strcat(sqlstr, str);
 			}
 		}
@@ -80,6 +82,9 @@ int runinternalcmd(char *str){
 		value=1;
 	}else if(strcmp(param[0],":s")==0){
 		if(param[1]!=NULL) show(param[1]);
+	}else if(strcmp(param[0],":l")==0){
+		printf("See %s at %s\n",
+			license_version, copylinks);
 	}else if(strcmp(param[0],":h")==0){
 		help();
 	}else{
@@ -89,13 +94,13 @@ int runinternalcmd(char *str){
 }
 
 void prompt(){
-	bool endsql=true;
+	bool newline=true;
 	int ric=0, dyn=0, len;
 	size_t buflen=0;
 	while(ric!=1){
-		printf(endsql?"sql> ":"   | ");
+		printf(newline?"sql> ":"   | ");
 		len=getline(&str,&buflen,stdin);
-		if(strncmp(":",str,1)==0){
+		if(strncmp(":",str,1)==0 && newline){
 			str[len-1]='\0';
 			ric=runinternalcmd(str);
 			if(ric==1) if(!closedb()) ric=0;
@@ -112,8 +117,8 @@ void prompt(){
 				break;
 			}else{
 				strcat(sqlstr, str);
-				endsql=strstr(str,";")!=NULL;
-				if(endsql){
+				newline=strstr(str,";")!=NULL;
+				if(newline){
 					exec(sqlstr);
 					dyn=0;
 					sqlstr[0]='\0';
