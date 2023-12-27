@@ -2,9 +2,7 @@
 #include <sqlite3.h>
 #include "database.cxx"
 
-const char nem[]="Not enough memory!\nTry dividing the SQL into several parts";
-char *str=NULL;
-char *sqlstr=NULL;
+using namespace std;
 
 void help(){
 	printf(":c file -> connect to database file\n");
@@ -23,33 +21,35 @@ void show(const char *objname){
 	exec(sql);
 }
 
+void setparams(string &str){
+	int start;
+	while((start=str.find("${"))>-1){
+		int end=str.find("}");
+		if(end>-1){
+			string name=str.substr(start+2,end-start-2);
+			cout<<name<<": ";
+			char value[128];
+			fgets(value,128,stdin);
+			value[strlen(value)-1]='\0';
+			str.erase(start,end-start+1);
+			str.insert(start,string(value));
+		}else{
+			break;
+		}
+	}
+}
+
 void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
-	if(afile !=NULL){
+	if(afile!=NULL){
 		const int maxl=128;
-		str=(char*)realloc(str,maxl);
-		int dyn=0;
-		while(fgets(str, maxl, afile)){
-			dyn+=strlen(str);
-			if(sqlstr==NULL){
-				sqlstr=(char*)malloc(dyn);
-				if(sqlstr!=NULL)sqlstr[0]='\0';
-				else{
-					printf(nem);
-					break;
-				}
-			}else{
-				sqlstr=(char*)realloc(sqlstr, dyn);
-			}
-			if(sqlstr!=NULL){
-				strcat(sqlstr, str);
-			}
-		}
+		char str[maxl];
+		string sql;
+		while(fgets(str, maxl, afile))
+			sql+=string(str);
+		setparams(sql);
+		exec(sql.c_str());
 		fclose(afile);
-		if(sqlstr!=NULL){
-			exec(sqlstr);
-			sqlstr[0]='\0';
-		}
 	}else{
 		printf("File '%s' not found.\n", fname);
 	}
@@ -94,8 +94,10 @@ int runinternalcmd(char *str){
 }
 
 void prompt(){
+	char *str=0;
+	string sql;
 	bool newline=true;
-	int ric=0, dyn=0, len;
+	int ric=0, len;
 	size_t buflen=0;
 	while(ric!=1){
 		printf(newline?"sql> ":"   | ");
@@ -105,28 +107,14 @@ void prompt(){
 			ric=runinternalcmd(str);
 			if(ric==1) if(!closedb()) ric=0;
 		}else{
-			dyn+=buflen;
-			if(sqlstr==NULL){
-				sqlstr=(char*)malloc(dyn);
-				sqlstr[0]='\0';
-			}else{
-				sqlstr=(char*)realloc(sqlstr, dyn);
-			}
-			if(sqlstr==NULL){
-				printf(nem);
-				break;
-			}else{
-				strcat(sqlstr, str);
-				newline=strstr(str,";")!=NULL;
-				if(newline){
-					exec(sqlstr);
-					dyn=0;
-					sqlstr[0]='\0';
-				}
+			sql+=string(str);
+			newline=strstr(str,";")!=NULL;
+			if(newline){
+				exec(sql.c_str());
+				sql="";
 			}
 		}
 	}
-	free(sqlstr);
 	free(str);
 }
 

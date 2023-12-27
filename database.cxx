@@ -1,5 +1,7 @@
 const char appname[]="SQLCMD";
-const char ver[]="0.1.1";
+const char ver[]="0.1.3";
+const char license_version[]="GPL v3";
+const char copylinks[]="https://www.gnu.org/licenses/";
 
 sqlite3 *db;
 char *zErrMsg=0;
@@ -55,12 +57,20 @@ int exec(const char *str){
 		}
 		printf("(%i rows)\n", nRow);
 	}else{
-		if(strncmp(str,"insert",6)==0
-			||strncmp(str,"update",6)==0
-			||strncmp(str,"delete",6)==0){
+		char tmp[strlen(str)];
+		strcpy(tmp,str);
+		char *tok=strtok(tmp," ");
+		char cmd[6];
+		for(int i=0; i<=5; i++){
+			cmd[i]=toupper(tok[i]);
+		}
+		cmd[6]='\0';
+		if(strcmp(cmd,"INSERT")==0
+			||strcmp(cmd,"UPDATE")==0
+			||strcmp(cmd,"DELETE")==0){
 			int changes=sqlite3_changes(db);
 			if(changes>0){
-				printf("%i row changes\n", changes);
+				printf("%s %i\n", cmd, changes);
 			}
 		}
 	}
