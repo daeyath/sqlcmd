@@ -4,6 +4,8 @@
 
 using namespace std;
 
+char delim[]=";";
+
 void help(){
 	printf(":c file -> connect to database file\n");
 	printf(":e sqlfile -> execute sqlfile\n");
@@ -45,10 +47,18 @@ void execfile(const char *fname){
 		const int maxl=128;
 		char str[maxl];
 		string sql;
-		while(fgets(str, maxl, afile))
+		while(fgets(str, maxl, afile)){
 			sql+=string(str);
-		setparams(sql);
-		exec(sql.c_str());
+			if(strstr(str,delim)!=NULL){
+				setparams(sql);
+				exec(sql.c_str());
+				sql="";
+			}
+		}
+		if(sql!=""){
+			setparams(sql);
+			exec(sql.c_str());
+		}
 		fclose(afile);
 	}else{
 		printf("File '%s' not found.\n", fname);
@@ -83,8 +93,8 @@ int runinternalcmd(char *str){
 	}else if(strcmp(param[0],":s")==0){
 		if(param[1]!=NULL) show(param[1]);
 	}else if(strcmp(param[0],":l")==0){
-		printf("See %s at %s\n",
-			license_version, copylinks);
+		printf("%s Copyright (C) 2023 HIDAYAT\n", appname);
+		printf("See %s at %s\n",license_version, copylinks);
 	}else if(strcmp(param[0],":h")==0){
 		help();
 	}else{
@@ -100,7 +110,7 @@ void prompt(){
 	int ric=0, len;
 	size_t buflen=0;
 	while(ric!=1){
-		printf(newline?"sql> ":"   | ");
+		printf(newline?"SQL> ":"   | ");
 		len=getline(&str,&buflen,stdin);
 		if(strncmp(":",str,1)==0 && newline){
 			str[len-1]='\0';
@@ -108,7 +118,7 @@ void prompt(){
 			if(ric==1) if(!closedb()) ric=0;
 		}else{
 			sql+=string(str);
-			newline=strstr(str,";")!=NULL;
+			newline=strstr(str,delim)!=NULL;
 			if(newline){
 				exec(sql.c_str());
 				sql="";
