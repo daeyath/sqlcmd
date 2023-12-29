@@ -8,8 +8,13 @@ Usually, to test data entry, you can use a shell script.  As support, I provide 
 
 ```
 export sqlconnection
-sqlconnection="test.file"
-./execsql "select * from atable"
+sqlconnection="company.db"
+./execsql "create table if not exists emp (id int primary key, name varchar not null)"
+printf "ID   : "
+read id
+printf "Name : "
+read name
+./execsql "insert into emp values ($id, '$name')"
 ```
 
 But execsql only supports transactions within its own quotes. Does not apply after next execsql.
