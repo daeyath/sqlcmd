@@ -30,18 +30,16 @@ void setparams(string &str){
 	while((start=str.find("${"))>-1){
 		int end=str.find("}");
 		if(end>-1){
-			char value[128];
 			string name=str.substr(start+2,end-start-2);
 			if(params[name]==""){
 				cout<<name<<": ";
+				char value[128];
 				fgets(value,128,stdin);
 				value[strlen(value)-1]='\0';
 				params[name]=string(value);
-			}else{
-				strcpy(value,params[name].c_str());
 			}
 			str.erase(start,end-start+1);
-			str.insert(start,string(value));
+			str.insert(start,params[name]);
 		}else{
 			break;
 		}
