@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include <sqlite3.h>
 #include "database.cxx"
 
@@ -24,15 +25,21 @@ void show(const char *objname){
 }
 
 void setparams(string &str){
+	map<string,string> params;
 	int start;
 	while((start=str.find("${"))>-1){
 		int end=str.find("}");
 		if(end>-1){
-			string name=str.substr(start+2,end-start-2);
-			cout<<name<<": ";
 			char value[128];
-			fgets(value,128,stdin);
-			value[strlen(value)-1]='\0';
+			string name=str.substr(start+2,end-start-2);
+			if(params[name]==""){
+				cout<<name<<": ";
+				fgets(value,128,stdin);
+				value[strlen(value)-1]='\0';
+				params[name]=string(value);
+			}else{
+				strcpy(value,params[name].c_str());
+			}
 			str.erase(start,end-start+1);
 			str.insert(start,string(value));
 		}else{
