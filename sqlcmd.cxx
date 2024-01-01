@@ -5,10 +5,11 @@
 
 using namespace std;
 
-char delim[]=";";
+char delim[8];
 
 void help(){
 	printf(":c file -> connect to database file\n");
+	printf(":d delim -> set delimiter\n");
 	printf(":e sqlfile -> execute sqlfile\n");
 	printf(":r command -> run shell command\n");
 	printf(":s object -> show objects, ex: :s table\n");
@@ -46,6 +47,15 @@ void setparams(string &str){
 	}
 }
 
+void setdelim(const char *c){
+	strcpy(delim,c);
+	printf("Delimiter %s\n",delim);
+}
+
+void remdelim(string &str){
+	str.erase(str.length()-(strlen(delim)+1));
+}
+
 void execfile(const char *fname){
 	FILE *afile=fopen(fname, "r");
 	if(afile!=NULL){
@@ -55,6 +65,7 @@ void execfile(const char *fname){
 		while(fgets(str, maxl, afile)){
 			sql+=string(str);
 			if(strstr(str,delim)!=NULL){
+				remdelim(sql);
 				setparams(sql);
 				exec(sql.c_str());
 				sql="";
@@ -91,6 +102,8 @@ int runinternalcmd(char *str){
 	}
 	if(strcmp(param[0],":c")==0){
 		if(closedb()) connectdb(param[1]);
+	}else if(strcmp(param[0],":d")==0){
+		setdelim(param[1]);
 	}else if(strcmp(param[0],":e")==0){
 		execfile(param[1]);
 	}else if(strcmp(param[0],":q")==0){
@@ -98,7 +111,7 @@ int runinternalcmd(char *str){
 	}else if(strcmp(param[0],":s")==0){
 		if(param[1]!=NULL) show(param[1]);
 	}else if(strcmp(param[0],":l")==0){
-		printf("%s Copyright (C) 2023 HIDAYAT\n", appname);
+		printf("%s %s\n",appname,copyright);
 		printf("See %s at %s\n",license_version, copylinks);
 	}else if(strcmp(param[0],":h")==0){
 		help();
@@ -124,7 +137,8 @@ void prompt(){
 		}else{
 			sql+=string(str);
 			newline=strstr(str,delim)!=NULL;
-			if(newline){
+			if(sql.length()>0 && newline){
+				remdelim(sql);
 				exec(sql.c_str());
 				sql="";
 			}
@@ -145,6 +159,7 @@ int main(int argc, char *argv[])
 	}
 	int state=1;
 	if(connectdb(fname)){
+		setdelim("//");
 		prompt();
 		state=0;
 	}
