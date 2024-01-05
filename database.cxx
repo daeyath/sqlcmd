@@ -1,6 +1,7 @@
 const char appname[]="SQLCMD";
-const char ver[]="0.1.3";
-const char license_version[]="GPL v3";
+const char copyright[]="Copyright (C) 2023 HIDAYAT";
+const char ver[]="0.1.4";
+const char license_version[]="GPL Version 3";
 const char copylinks[]="https://www.gnu.org/licenses/";
 
 sqlite3 *db;
@@ -60,14 +61,14 @@ int exec(const char *str){
 		char tmp[strlen(str)];
 		strcpy(tmp,str);
 		char *tok=strtok(tmp," ");
-		char cmd[6];
-		for(int i=0; i<=5; i++){
-			cmd[i]=toupper(tok[i]);
+		char cmd[7];
+		for(int i=0; i<6; i++){
+			cmd[i]=tolower(tok[i]);
 		}
 		cmd[6]='\0';
-		if(strcmp(cmd,"INSERT")==0
-			||strcmp(cmd,"UPDATE")==0
-			||strcmp(cmd,"DELETE")==0){
+		if(strcmp(cmd,"insert")==0
+			||strcmp(cmd,"update")==0
+			||strcmp(cmd,"delete")==0){
 			int changes=sqlite3_changes(db);
 			if(changes>0){
 				printf("%s %i\n", cmd, changes);

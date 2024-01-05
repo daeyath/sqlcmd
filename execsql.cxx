@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
 			if(!closedb()) state=4;
 		}else state=3;
 	}else{
-		printf("Usage:\nexport %s\n%s=\"a file.db\"\n%s \"sql command\"\n",sqlconstr,sqlconstr,argv[0]);
+		printf("%s\n",copyright);
+		printf("Usage:\n\nexport %s\n%s=\"a file.db\"\n%s \"sql command\"\n",sqlconstr,sqlconstr,argv[0]);
 		state=1;
 	}
 	return state;

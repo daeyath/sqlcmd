@@ -5,21 +5,21 @@
 
 using namespace std;
 
-char delim[8];
+char term[8];
 
 void help(){
 	printf(":c file -> connect to database file\n");
-	printf(":d delim -> set delimiter\n");
 	printf(":e sqlfile -> execute sqlfile\n");
+	printf(":l -> show license\n");
 	printf(":r command -> run shell command\n");
 	printf(":s object -> show objects, ex: :s table\n");
-	printf(":l -> show license\n");
 	printf(":q -> exit and close database\n");
+	printf(":t term -> set terminator for executing\n");
 }
 
 void show(const char *objname){
 	char str[]="select name as \"%s\" from sqlite_schema where type='%s'";
-	char sql[1024];
+	char sql[384];
 	sprintf(sql, str, objname, objname);
 	strcat(sql, " and name not like 'sqlite_%'");
 	exec(sql);
@@ -47,25 +47,23 @@ void setparams(string &str){
 	}
 }
 
-void setdelim(const char *c){
-	strcpy(delim,c);
-	printf("Delimiter %s\n",delim);
-}
-
-void remdelim(string &str){
-	str.erase(str.length()-(strlen(delim)+1));
+void setterm(const char *c){
+	if(c!=0)
+		strcpy(term,c);
+	else
+		printf("term %s\n",term);
 }
 
 void execfile(const char *fname){
-	FILE *afile=fopen(fname, "r");
-	if(afile!=NULL){
+	FILE *sqlfile=fopen(fname, "r");
+	if(sqlfile!=NULL){
 		const int maxl=128;
 		char str[maxl];
 		string sql;
-		while(fgets(str, maxl, afile)){
+		while(fgets(str, maxl, sqlfile)){
 			sql+=string(str);
-			if(strstr(str,delim)!=NULL){
-				remdelim(sql);
+			if(strstr(str,term)!=NULL){
+				sql.erase(sql.find(string(term)));
 				setparams(sql);
 				exec(sql.c_str());
 				sql="";
@@ -75,7 +73,7 @@ void execfile(const char *fname){
 			setparams(sql);
 			exec(sql.c_str());
 		}
-		fclose(afile);
+		fclose(sqlfile);
 	}else{
 		printf("File '%s' not found.\n", fname);
 	}
@@ -92,7 +90,7 @@ int runinternalcmd(char *str){
 	}
 	// internal
 	int i=0;
-	char *param[2];
+	char *param[2]={0,0};
 	char delim[]=" ";
 	char *item=strtok(str, delim);
 	while(item!=NULL){
@@ -102,8 +100,8 @@ int runinternalcmd(char *str){
 	}
 	if(strcmp(param[0],":c")==0){
 		if(closedb()) connectdb(param[1]);
-	}else if(strcmp(param[0],":d")==0){
-		setdelim(param[1]);
+	}else if(strcmp(param[0],":t")==0){
+		setterm(param[1]);
 	}else if(strcmp(param[0],":e")==0){
 		execfile(param[1]);
 	}else if(strcmp(param[0],":q")==0){
@@ -136,9 +134,12 @@ void prompt(){
 			if(ric==1) if(!closedb()) ric=0;
 		}else{
 			sql+=string(str);
-			newline=strstr(str,delim)!=NULL;
-			if(sql.length()>0 && newline){
-				remdelim(sql);
+			newline=strstr(str,term)!=NULL;
+			if(newline){
+				if(strcmp(term,";")!=0)
+					sql.replace(
+						sql.find(string(term)),
+						strlen(term),";");
 				exec(sql.c_str());
 				sql="";
 			}
@@ -159,7 +160,7 @@ int main(int argc, char *argv[])
 	}
 	int state=1;
 	if(connectdb(fname)){
-		setdelim("//");
+		setterm("//");
 		prompt();
 		state=0;
 	}
