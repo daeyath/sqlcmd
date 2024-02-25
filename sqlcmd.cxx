@@ -5,113 +5,141 @@
 
 using namespace std;
 
-char term[8];
+typedef map<string,string> params;
+const int maxt=6, maxl=128;
+char term[maxt];
+char str[maxl];
+
+string lastsql;
+static int runinternalcmd();
 
 void help(){
-	printf(":c file -> connect to database file\n");
-	printf(":e sqlfile -> execute sqlfile\n");
+	printf(":c dbfile -> connect to database file\n");
+	printf(":e file -> execute sql file\n");
 	printf(":l -> show license\n");
+	printf(":print text -> show a text\n");
 	printf(":r command -> run shell command\n");
 	printf(":s object -> show objects, ex: :s table\n");
+	printf(":w file -> write last typing to a file\n");
 	printf(":q -> exit and close database\n");
-	printf(":t term -> set terminator for executing\n");
+	printf(":t term -> set terminator for exec sql\n");
 }
 
-void show(const char *objname){
-	char str[]="select name as \"%s\" from sqlite_schema where type='%s'";
-	char sql[384];
-	sprintf(sql, str, objname, objname);
-	strcat(sql, " and name not like 'sqlite_%'");
-	exec(sql);
-}
-
-void setparams(string &str){
-	map<string,string> params;
-	int start;
+void setparams(string &str, params &param){
+	int start; const char empty[]="_";
 	while((start=str.find("${"))>-1){
 		int end=str.find("}");
 		if(end>-1){
 			string name=str.substr(start+2,end-start-2);
-			if(params[name]==""){
+			if(param[name].empty()){
 				cout<<name<<": ";
 				char value[128];
 				fgets(value,128,stdin);
 				value[strlen(value)-1]='\0';
-				params[name]=string(value);
+				if(strcmp(value,"")==0)strcpy(value,empty);
+				param[name]=string(value);
 			}
-			str.erase(start,end-start+1);
-			str.insert(start,params[name]);
-		}else{
+			string value=param[name]==empty?"":param[name];
+			str.replace(start, end-start+1, value);
+		}else
 			break;
-		}
 	}
 }
 
-void setterm(const char *c){
-	if(c!=0)
-		strcpy(term,c);
-	else
-		printf("term %s\n",term);
+void show(const char *objname){
+	char str[]="select name as \"%s\" from sqlite_schema where type='%s'";
+	char tmp[]=" and name not like 'sqlite_%'";
+	int len=strlen(str)-1+strlen(tmp)-1+(2*(strlen(objname)-1));
+	char sql[len];
+	sprintf(sql, str, objname, objname);
+	strcat(sql, tmp);
+	exec(sql);
 }
 
-void execfile(const char *fname){
+void setterm(const char *f){
+	if(f!=0){
+		const int len=strlen(f);
+		if(len<=maxt){
+			strcpy(term,f);
+		}else
+			printf("Max chars %i\n",maxt);
+	}else printf("terminating with \"%s\" for executing query\n",term);
+}
+
+void fixterm(string &s){
+	if(strcmp(term,";")!=0) s.erase(
+		s.find(term), strlen(term)
+	);
+}
+
+int execfile(const char *fname){
+	int state=0;
 	FILE *sqlfile=fopen(fname, "r");
 	if(sqlfile!=NULL){
-		const int maxl=128;
-		char str[maxl];
 		string sql;
+		params p;
 		while(fgets(str, maxl, sqlfile)){
-			sql+=string(str);
+			if(strncmp(":",str,1)==0){
+				str[strlen(str)-1]='\0';
+				state=runinternalcmd();
+			}else sql.append(str);
 			if(strstr(str,term)!=NULL){
-				sql.erase(sql.find(string(term)));
-				setparams(sql);
+				fixterm(sql);
+				setparams(sql,p);
 				exec(sql.c_str());
-				sql="";
+				lastsql=sql;
+				sql.clear();
 			}
 		}
-		if(sql!=""){
-			setparams(sql);
+		if(!sql.empty()){
+			setparams(sql,p);
 			exec(sql.c_str());
+			lastsql=sql;
 		}
 		fclose(sqlfile);
 	}else{
 		printf("File '%s' not found.\n", fname);
 	}
+	return state;
 }
 
-int runinternalcmd(char *str){
-	int value=0;
-	// external
-	if(strncmp(":r", str, 2)==0){
-		char command[strlen(str)-2];
-		strncpy(command, str+2, strlen(str));
-		system(command);
-		return value;
-	}
-	// internal
-	int i=0;
-	char *param[2]={0,0};
-	char delim[]=" ";
-	char *item=strtok(str, delim);
-	while(item!=NULL){
-		param[i]=item;
-		i++;
-		item=strtok(NULL, delim);
-	}
-	if(strcmp(param[0],":c")==0){
-		if(closedb()) connectdb(param[1]);
-	}else if(strcmp(param[0],":t")==0){
-		setterm(param[1]);
-	}else if(strcmp(param[0],":e")==0){
-		execfile(param[1]);
-	}else if(strcmp(param[0],":q")==0){
+int runinternalcmd(){
+	int value=0, j=0;
+	while(str[j]!=32 && str[j]!=0)j++;
+	char *param=0, *var=str+j+1;
+	if(var[0]!=0)param=var;
+	if(strncmp(str,":c",j)==0){
+		if(param!=NULL)
+			if(closedb())
+				connectdb(param);
+	}else if(strncmp(str,":t",j)==0){
+		setterm(param);
+	}else if(strncmp(str,":e",j)==0){
+		if(param!=NULL)
+			value=execfile(param);
+	}else if(strncmp(str,":print",j)==0){
+		if(param!=NULL)
+			printf("%s\n",param);
+	}else if(strncmp(str,":q",j)==0){
 		value=1;
-	}else if(strcmp(param[0],":s")==0){
-		if(param[1]!=NULL) show(param[1]);
-	}else if(strcmp(param[0],":l")==0){
+	}else if(strncmp(str,":r",j)==0){
+		system(param);
+	}else if(strncmp(str,":s",j)==0){
+		if(param!=NULL)show(param);
+	}else if(strncmp(str,":w",j)==0){
+		if(param!=NULL){
+			FILE *f=fopen(param,"w");
+			if(f!=NULL){
+				fprintf(f,"%s",lastsql.c_str());
+				fclose(f);
+			}else{
+				fprintf(stderr,"File can't wrote.\n");
+			}
+		}
+	}else if(strncmp(str,":l",j)==0){
 		printf("%s %s\n",appname,copyright);
 		printf("See %s at %s\n",license_version, copylinks);
-	}else if(strcmp(param[0],":h")==0){
+	}else if(strncmp(str,":h",j)==0){
 		help();
 	}else{
 		printf("'%s' command not found\n", str);
@@ -120,37 +148,33 @@ int runinternalcmd(char *str){
 }
 
 void prompt(){
-	char *str=0;
 	string sql;
-	bool newline=true;
-	int ric=0, len;
-	size_t buflen=0;
-	while(ric!=1){
-		printf(newline?"SQL> ":"   | ");
-		len=getline(&str,&buflen,stdin);
+	int newline=1, cmd=0;
+	while(cmd!=1){
+		printf(newline?"sql> ":"   | ");
+		fgets(str,maxl,stdin);
 		if(strncmp(":",str,1)==0 && newline){
-			str[len-1]='\0';
-			ric=runinternalcmd(str);
-			if(ric==1) if(!closedb()) ric=0;
+			str[strlen(str)-1]='\0';
+			cmd=runinternalcmd();
+			if(cmd==1)
+				if(!closedb())
+					cmd=0;
 		}else{
-			sql+=string(str);
+			sql.append(str);
 			newline=strstr(str,term)!=NULL;
 			if(newline){
-				if(strcmp(term,";")!=0)
-					sql.replace(
-						sql.find(string(term)),
-						strlen(term),";");
+				fixterm(sql);
 				exec(sql.c_str());
-				sql="";
+				lastsql=sql;
+				sql.clear();
 			}
 		}
 	}
-	free(str);
 }
 
 int main(int argc, char *argv[])
 {
-	printf("%s Version %s\nType :h for help\n", appname, ver);
+	printf("%s Version %s\n",appname,ver);
 	char *fname;
 	if(argv[1])
 		fname=argv[1];
@@ -160,8 +184,10 @@ int main(int argc, char *argv[])
 	}
 	int state=1;
 	if(connectdb(fname)){
-		setterm("//");
+		printf("Type :h for help\n");
+		setterm(";");
 		prompt();
+		printf("bye!\n");
 		state=0;
 	}
 	return state;
