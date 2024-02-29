@@ -1,6 +1,6 @@
 const char appname[]="SQLCMD";
 const char copyright[]="Copyright (C) 2023 HIDAYAT";
-const char ver[]="0.1.6";
+const char ver[]="0.1.8";
 const char license_version[]="GPL Version 3";
 const char copylinks[]="https://www.gnu.org/licenses/";
 
