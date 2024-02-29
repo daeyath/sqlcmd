@@ -1,17 +1,15 @@
 #include <iostream>
 #include <map>
+#include <fstream>
 #include <sqlite3.h>
 #include "database.cxx"
 
 using namespace std;
 
 typedef map<string,string> params;
-const int maxt=6, maxl=128;
-char term[maxt];
-char str[maxl];
-
+const int maxt=6; char term[maxt];
 string lastsql;
-static int runinternalcmd();
+static int runinternalcmd(const char *str);
 
 void help(){
 	printf(":c dbfile -> connect to database file\n");
@@ -33,11 +31,10 @@ void setparams(string &str, params &param){
 			string name=str.substr(start+2,end-start-2);
 			if(param[name].empty()){
 				cout<<name<<": ";
-				char value[128];
-				fgets(value,128,stdin);
-				value[strlen(value)-1]='\0';
-				if(strcmp(value,"")==0)strcpy(value,empty);
-				param[name]=string(value);
+				string value;
+				getline(cin, value);
+				if(value.empty())value=empty;
+				param[name]=value;
 			}
 			string value=param[name]==empty?"":param[name];
 			str.replace(start, end-start+1, value);
@@ -74,39 +71,39 @@ void fixterm(string &s){
 
 int execfile(const char *fname){
 	int state=0;
-	FILE *sqlfile=fopen(fname, "r");
-	if(sqlfile!=NULL){
-		string sql;
-		params p;
-		while(fgets(str, maxl, sqlfile)){
-			if(strncmp(":",str,1)==0){
-				str[strlen(str)-1]='\0';
-				state=runinternalcmd();
-			}else sql.append(str);
-			if(strstr(str,term)!=NULL){
+	ifstream file(fname); if(file){
+		string sql, str; params p;
+		while(getline(file, str)){
+			setparams(str, p);
+			if(str[0]==':'){
+				state=runinternalcmd(str.c_str());
+			}else{
+				sql.append(str);
+				sql.append("\n");
+			}
+			int termpos=str.find(term);
+			if(termpos>-1){
 				fixterm(sql);
-				setparams(sql,p);
 				exec(sql.c_str());
 				lastsql=sql;
 				sql.clear();
 			}
 		}
 		if(!sql.empty()){
-			setparams(sql,p);
 			exec(sql.c_str());
 			lastsql=sql;
 		}
-		fclose(sqlfile);
+		file.close();
 	}else{
 		printf("File '%s' not found.\n", fname);
 	}
 	return state;
 }
 
-int runinternalcmd(){
+int runinternalcmd(const char *str){
 	int value=0, j=0;
 	while(str[j]!=32 && str[j]!=0)j++;
-	char *param=0, *var=str+j+1;
+	const char *param=0, *var=str+j+1;
 	if(var[0]!=0)param=var;
 	if(strncmp(str,":c",j)==0){
 		if(param!=NULL)
@@ -148,20 +145,20 @@ int runinternalcmd(){
 }
 
 void prompt(){
-	string sql;
-	int newline=1, cmd=0;
+	string sql, str;
+	int newline=1, cmd=0, termpos;
 	while(cmd!=1){
 		printf(newline?"sql> ":"   | ");
-		fgets(str,maxl,stdin);
-		if(strncmp(":",str,1)==0 && newline){
-			str[strlen(str)-1]='\0';
-			cmd=runinternalcmd();
+		getline(cin, str);
+		if(str[0]==':' && newline){
+			cmd=runinternalcmd(str.c_str());
 			if(cmd==1)
 				if(!closedb())
 					cmd=0;
 		}else{
 			sql.append(str);
-			newline=strstr(str,term)!=NULL;
+			termpos = str.find(term);
+			newline = termpos > -1;
 			if(newline){
 				fixterm(sql);
 				exec(sql.c_str());
