@@ -4,17 +4,4 @@ After my job is finished at the end of 2022 * I will replace my smartphone as a 
 
 Run `clang -o sqlcmd sqlcmd.cxx` to compile source code and then run `./sqlcmd` in your favorite shell.
 
-Usually, to test data entry, you can use a shell script.  As support, I provide a small program, namely execsql, which can be used together with a shell script. To using it, compile source code with `clang -o execsql execsql.cxx`, and you may use it in your shell script as:
-
-```
-export sqlconnection
-sqlconnection="company.db"
-./execsql "create table if not exists emp (id int primary key, name varchar not null)"
-printf "ID   : "
-read id
-printf "Name : "
-read name
-./execsql "insert into emp values ($id, '$name')"
-```
-
-But execsql only supports transactions within its own quotes. Does not apply after next execsql.
+Usually, to use data entry function, you can use parameter like `${Param Name}` in the sql script.
