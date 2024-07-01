@@ -47,10 +47,11 @@ class sqlite: public query {
 };
 
 void sqlite::xp(const char *exp){
-	char stmt[7+strlen(exp)];
+	char *stmt=new char[7+strlen(exp)];
 	strcpy(stmt,"SELECT ");
 	strcat(stmt,exp);
 	int res=sqlite3_exec(db, stmt, xpresult, 0, 0);
+	free(stmt);
 }
 
 int sqlite::xpresult(void *NotUsed, int argc, char **argv, char **colname){
