@@ -11,7 +11,8 @@ const char ver[]="0.1.10";
 const char license_version[]="GPL Version 3";
 const char copylinks[]="https://www.gnu.org/licenses/";
 
-class query {
+class sqlcmd {
+	private:
 		string lastsql;
 		const int tlm=6;
 		char *term;
@@ -22,17 +23,17 @@ class query {
 		virtual void exec(const char*)=0;
 		virtual void xp(const char*)=0;
 		virtual bool disconnected()=0;
-		int runinternal(string&);
+		int runinternal(const char*);
 		int execfile(const char*);
 	public:
 		void serve();
 		virtual void connect(const char*)=0;
 		virtual bool connected()=0;
-		query();
-		virtual ~query();
+		sqlcmd();
+		virtual ~sqlcmd();
 };
 
-class sqlite: public query {
+class sqlite: public sqlcmd {
 		sqlite3 *db;
 		bool conn=false;
 		void show_object(const char*);
@@ -47,11 +48,11 @@ class sqlite: public query {
 };
 
 void sqlite::xp(const char *exp){
-	char *stmt=new char[7+strlen(exp)];
-	strcpy(stmt,"SELECT ");
+	char exec[]="select ";
+	char stmt[strlen(exec)+strlen(exp)];
+	strcpy(stmt,exec);
 	strcat(stmt,exp);
 	int res=sqlite3_exec(db, stmt, xpresult, 0, 0);
-	free(stmt);
 }
 
 int sqlite::xpresult(void *NotUsed, int argc, char **argv, char **colname){
@@ -184,12 +185,13 @@ void sqlite::exec(const char *str){
 	sqlite3_free_table(azResult);
 }
 
-void query::help(){
+void sqlcmd::help(){
 	puts(":c dbfile -> connect to database file");
 	puts(":x file -> execute sql file");
+	puts(":xp expr -> calculate expr");
 	puts(":l -> show license");
-	puts(":print text -> show a text");
-	puts(":q -> exit and close database");
+	puts(":p text -> show a text");
+	puts(":e -> exit and close database");
 	puts(":r command -> run shell command");
 	puts(":s object -> show objects, ex: :s table");
 	puts(":v term char -> set char for terminator");
@@ -209,7 +211,7 @@ void sqlite::show_object(const char *objname){
 	exec(sql);
 }
 
-void query::setterm(const char *f){
+void sqlcmd::setterm(const char *f){
 	if(f!=0){
 		const int len=strlen(f);
 		if(len<=tlm){
@@ -219,14 +221,13 @@ void query::setterm(const char *f){
 	}else printf("terminating with \"%s\" for executing query\n",term);
 }
 
-void query::fixterm(string &s){
+void sqlcmd::fixterm(string &s){
 	if(strcmp(term,";")!=0) s.erase(
 		s.find(term), strlen(term)
 	);
 }
 
-int query::runinternal(string &s){
-	const char *cmd=s.c_str();
+int sqlcmd::runinternal(const char *cmd){
 	int value=0, j=0;
 	while(cmd[j]!=32 && cmd[j]!=0)j++;
 	const char *param=0;
@@ -242,10 +243,10 @@ int query::runinternal(string &s){
 		}
 	}else if(strncmp(cmd,":xp",j)==0){
 		if(param!=0) xp(param);
-	}else if(strncmp(cmd,":print",j)==0){
+	}else if(strncmp(cmd,":p",j)==0){
 		if(param!=NULL)
 			printf("%s\n",param);
-	}else if(strncmp(cmd,":q",j)==0){
+	}else if(strncmp(cmd,":e",j)==0){
 		value=1;
 	}else if(strncmp(cmd,":r",j)==0){
 		system(param);
@@ -281,7 +282,7 @@ int query::runinternal(string &s){
 	return value;
 }
 
-int query::execfile(const char *fname){
+int sqlcmd::execfile(const char *fname){
 	int state=0;
 	ifstream sqlfile(fname);
 	if(sqlfile){
@@ -318,7 +319,7 @@ int query::execfile(const char *fname){
 				}else break;
 			}
 			if(line[0]==':'){
-				state=runinternal(line);
+				state=runinternal(line.c_str());
 			}else{
 				sql+=line+"\n";
 				if(line.find(term)!=string::npos){
@@ -340,17 +341,15 @@ int query::execfile(const char *fname){
 	return state;
 }
 
-void query::serve(){
+void sqlcmd::serve(){
 	string sql, str;
-	int newline=1, cmd=0;
-	serv:
+	int newline=1, k=0;
+	start:
 	printf(newline?"sql> ":"   | ");
 	getline(cin, str);
 	if(str[0]==':' && newline){
-		cmd=runinternal(str);
-		if(cmd==1)
-			if(!disconnected())
-				cmd=0;
+		k=runinternal(str.c_str());
+		if(k==1)if(!disconnected())k=0;
 	}else{
 		sql+=str+"\n";
 		newline=str.find(term)!=string::npos;
@@ -361,15 +360,15 @@ void query::serve(){
 			sql.clear();
 		}
 	}
-	if(cmd==0)goto serv;
+	if(k==0) goto start;
 }
 
-query::query(){
+sqlcmd::sqlcmd(){
 	term=new char[tlm];
 	setterm(";");
 }
 
-query::~query(){
+sqlcmd::~sqlcmd(){
 	free(term);
 }
 
@@ -377,8 +376,8 @@ int main(int argc, char *argv[]){
 	int state=1;
 	printf("%s Version %s\n",appname,ver);
 	const char *connection; char *tmp=0;
-	query *dbx = 0;
-	{
+	sqlcmd *dbx = 0;
+	/* for only sqlite */ {
 		dbx = new sqlite();
 		connection=argv[1];
 		if(!connection){
