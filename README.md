@@ -4,4 +4,4 @@ After my job is finished at the end of 2022 I will replace my smartphone as a me
 
 Commonly to use binary please use your favorit C++ compiler to compile source code. And then run compiled program with `./sqlcmd` in Unix shell. I'm using LLVM compiler for using.
 
-Sqlcmd has an input prompt for entering data as parameters. Parameters are inserted into SQL scripts. For example, the '${Test}' parameter will display Test when the script is run, and the user can enter it.
+Sqlcmd has an input prompt for entering data as parameters. Parameters are inserted into SQL scripts. For example, the '${Test}' parameter will display Test when the script is run, and the user can enter the value. And value changed in SQL script.
