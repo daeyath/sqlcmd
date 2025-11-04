@@ -6,5 +6,5 @@ Commonly to use binary please use your favorit C++ compiler to compile source co
 
 Sqlcmd has an input prompt for entering data as parameters. Parameters are inserted into SQL scripts. For example, the '${Test}' parameter will display Test prompt when the script is run, and the user can enter the value. And parameter changed in SQL script with value is given.
 
-```SELECT '${Name}';``` will prompt
+```SELECT '${Name}'``` will prompt
 ```Name: ``` and filling the prompt with `Hidayat` it will return `Hidayat`. The parameters only run when executing the sql script.
