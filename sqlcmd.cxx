@@ -60,23 +60,12 @@ int sqlite::xpresult(void *NotUsed, int argc, char **argv, char **colname){
 }
 
 void sqlite::connect(const char *f){
-	if(conn){
+	if(connected()){
 		puts("Please close the current database");
 	}else{
-		bool val=false;
-		for(int i=0; i<strlen(f); i++){
-			val=(f[i]>=97 && 122>=f[i]) 
-				|| (f[i]>=65 && f[i]<=90)
-				|| f[i]==58 || f[i]==46;
-			if(!val)break;
-		}
-		if(val){
-			conn=sqlite3_open(f, &db)==SQLITE_OK;
-			if(!conn)
-				fprintf(stderr, "Error: %s '%s'\n", sqlite3_errmsg(db), f);
-		}else{
-			fprintf(stderr, "File name not accepted: %s\n",f);
-		}
+		conn=sqlite3_open(f, &db)==SQLITE_OK;
+		if(!conn)
+			fprintf(stderr, "Error: %s '%s'\n", sqlite3_errmsg(db), f);
 	}
 }
 
