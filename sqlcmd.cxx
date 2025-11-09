@@ -280,17 +280,17 @@ int sqlcmd::execfile(const char *fname){
 			bool empty(){
 				return d.empty() && !tag;
 			}
-			void data(string d){
+			void save(string d){
 				if(!d.empty())this->d = d;
 				tag = d.empty();
 			}
-			const char *data(){
+			const char *get_data(){
 				return d.c_str();
 			}
 			private:
 				string d;
 				int tag=0;
-		} *pr;
+		} *pstr;
 		map<string,paramstr> param;
 		while(getline(sqlfile, line)){
 			string::size_type start;
@@ -298,13 +298,13 @@ int sqlcmd::execfile(const char *fname){
 				string::size_type end=line.find("}");
 				if(start<end){
 					string name=line.substr(start+2,end-start-2);
-					pr=&param[name];
-					if(pr->empty()){
+					pstr=&param[name];
+					if(pstr->empty()){
 						cout<<name<<": "; string result;
 						getline(cin, result);
-						pr->data(result);
+						pstr->save(result);
 					}
-					line.replace(start, end-start+1, pr->data());
+					line.replace(start, end-start+1, pstr->get_data());
 				}else break;
 			}
 			if(line[0]==':'){
