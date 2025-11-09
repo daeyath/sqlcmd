@@ -278,17 +278,17 @@ int sqlcmd::execfile(const char *fname){
 		string sql, line;
 		struct paramstr {
 			bool empty(){
-				return d.empty() && !tag;
+				return data.empty() && !tag;
 			}
-			void save(string d){
-				if(!d.empty())this->d = d;
-				tag = d.empty();
+			void save(string data){
+				if(!data.empty())this->data = data;
+				tag = data.empty();
 			}
 			const char *get_data(){
-				return d.c_str();
+				return data.c_str();
 			}
 			private:
-				string d;
+				string data;
 				int tag=0;
 		} *pstr;
 		map<string,paramstr> param;
