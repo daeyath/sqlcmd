@@ -300,9 +300,10 @@ int sqlcmd::execfile(const char *fname){
 					string name=line.substr(start+2,end-start-2);
 					pstr=&param[name];
 					if(pstr->empty()){
-						cout<<name<<": "; string result;
-						getline(cin, result);
-						pstr->save(result);
+						cout<<name<<": "; 
+						string data;
+						getline(cin, data);
+						pstr->save(data);
 					}
 					line.replace(start, end-start+1, pstr->get_data());
 				}else break;
