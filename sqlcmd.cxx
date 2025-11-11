@@ -226,10 +226,8 @@ int sqlcmd::runinternal(const char *cmd){
 			if(disconnected())
 				connect(param);
 	}else if(strncmp(cmd,":x",j)==0){
-		if(param!=NULL){
-			const char *path=param;
-			value=execfile(path);
-		}
+		if(param!=NULL)
+			value=execfile(param);
 	}else if(strncmp(cmd,":xp",j)==0){
 		if(param!=0) xp(param);
 	}else if(strncmp(cmd,":p",j)==0){
@@ -257,7 +255,7 @@ int sqlcmd::runinternal(const char *cmd){
 					fprintf(f,"%s",lastsql.c_str());
 				fclose(f);
 			}else{
-				fprintf(stderr,"File can't wrote.\n");
+				fprintf(stderr,"File can't be writen.\n");
 			}
 		}
 	}else if(strncmp(cmd,":l",j)==0){
@@ -276,20 +274,20 @@ int sqlcmd::execfile(const char *fname){
 	ifstream sqlfile(fname);
 	if(sqlfile){
 		string sql, line;
-		struct paramstr {
+		class paramstr {
+			string data;
+			int e=0;
+		public:
 			bool empty(){
-				return data.empty() && !tag;
+				return data.empty() && !e;
 			}
 			void save(string data){
-				if(!data.empty())this->data = data;
-				tag = data.empty();
+				e = data.empty();
+				if(!e)this->data = data;
 			}
 			const char *get_data(){
 				return data.c_str();
 			}
-			private:
-				string data;
-				int tag=0;
 		} *pstr;
 		map<string,paramstr> param;
 		while(getline(sqlfile, line)){
